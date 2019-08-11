@@ -108,27 +108,27 @@ func Difference(t1 TimeOfDay, t2 TimeOfDay) duration.Duration {
 }
 
 // Hour returns the hour specified by t, in the range [0, 24].
-func (t TimeOfDay) Hour() int {
+func (t TimeOfDay) Hour() int64 {
 	if t == Time2400 {
 		return 24
 	}
-	return int(int64(t)%microsecondsPerDay) / microsecondsPerHour
+	return int64(int64(t)%microsecondsPerDay) / microsecondsPerHour
 }
 
 // Minute returns the minute offset within the hour specified by t, in the
 // range [0, 59].
-func (t TimeOfDay) Minute() int {
-	return int(int64(t)%microsecondsPerHour) / microsecondsPerMinute
+func (t TimeOfDay) Minute() int64 {
+	return int64(int64(t)%microsecondsPerHour) / microsecondsPerMinute
 }
 
 // Second returns the second offset within the minute specified by t, in the
 // range [0, 59].
-func (t TimeOfDay) Second() int {
-	return int(int64(t)%microsecondsPerMinute) / microsecondsPerSecond
+func (t TimeOfDay) Second() int64 {
+	return int64(int64(t)%microsecondsPerMinute) / microsecondsPerSecond
 }
 
 // Microsecond returns the microsecond offset within the second specified by t,
 // in the range [0, 999999].
-func (t TimeOfDay) Microsecond() int {
-	return int(int64(t) % microsecondsPerSecond)
+func (t TimeOfDay) Microsecond() int64 {
+	return int64(int64(t) % microsecondsPerSecond)
 }
