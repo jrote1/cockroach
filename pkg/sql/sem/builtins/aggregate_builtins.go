@@ -1546,7 +1546,7 @@ func (a *floatSumSqrDiffsAggregate) Add(
 	totalCount, ok := arith.AddWithOverflow(a.count, count)
 	if !ok {
 		return pgerror.Newf(pgcode.NumericValueOutOfRange,
-			"number of values in aggregate exceed max count of %d", math.MaxInt64,
+			"number of values in aggregate exceed max count of %d", math.MaxInt32,
 		)
 	}
 	// We are converting an int64 number (with 63-bit precision)

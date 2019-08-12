@@ -4393,9 +4393,9 @@ func truncateTime(fromTime *tree.DTime, timeSpan string) (*tree.DTime, error) {
 	sec := t.Second()
 	micro := t.Microsecond()
 
-	minTrunc := 0
-	secTrunc := 0
-	microTrunc := 0
+	minTrunc := int64(0)
+	secTrunc := int64(0)
+	microTrunc := int64(0)
 
 	switch timeSpan {
 	case "hour", "hours":

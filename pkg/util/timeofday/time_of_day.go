@@ -43,7 +43,7 @@ const (
 )
 
 // New creates a TimeOfDay representing the specified time.
-func New(hour, min, sec, micro int) TimeOfDay {
+func New(hour, min, sec, micro int64) TimeOfDay {
 	hours := time.Duration(hour) * time.Hour
 	minutes := time.Duration(min) * time.Minute
 	seconds := time.Duration(sec) * time.Second

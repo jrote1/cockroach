@@ -42,7 +42,7 @@ const entryOverhead = 16
 
 const (
 	lenBits, lenMask  = 28, 1<<lenBits - 1 // 512mb item limit, 32gb buffer limit.
-	maxLen, maxOffset = lenMask, 1<<(64-lenBits) - 1
+	maxLen, maxOffset = lenMask, 1<<(58-lenBits) - 1
 )
 
 func (b *kvBuf) append(k, v []byte) error {

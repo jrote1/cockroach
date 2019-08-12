@@ -1,0 +1,19 @@
+FROM arm32v7/golang:1.13beta1-alpine as builder
+RUN apk add bash ca-certificates git gcc g++ libc-dev make cmake
+
+ENV GO111MODULE=auto
+ENV GOPATH=/go
+
+RUN mkdir -p /go/src/github.com/cockroachdb && \
+    cd /go/src/github.com/cockroachdb && \
+    git clone https://github.com/jrote1/cockroach && \
+    cd cockroach && \
+    git submodule update --init --recursive
+
+WORKDIR /go/src/github.com/cockroachdb/cockroach
+
+RUN apk add yarn libbz2 libgcc libstdc++ lz4-libs musl snappy zlib zstd-libs linux-headers autoconf ncurses ncurses-libs ncurses-terminfo ncurses-dev
+
+RUN git pull
+
+RUN make -f Makefile build TAGS='stdmalloc'
