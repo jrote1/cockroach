@@ -103,7 +103,8 @@ func (b *BytesValue) String() string {
 	// This uses the MiB, GiB, etc suffixes. If we use humanize.Bytes() we get
 	// the MB, GB, etc suffixes, but the conversion is done in multiples of 1000
 	// vs 1024.
-	return IBytes(atomic.LoadInt64(b.val))
+	// return IBytes(atomic.LoadInt64(b.val))
+	return IBytes(0)
 }
 
 // IsSet returns true iff Set has successfully been called.
