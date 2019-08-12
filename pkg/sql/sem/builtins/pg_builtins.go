@@ -1657,7 +1657,7 @@ func setSessionVar(ctx *tree.EvalContext, settingName, newVal string, isLocal bo
 // catalog table like pg_database, in the pg_class table) for an input catalog
 // name (like pg_class or pg_database). It returns false if there is no such
 // catalog table.
-func getCatalogOidForComments(catalogName string) (id int, ok bool) {
+func getCatalogOidForComments(catalogName string) (id int64, ok bool) {
 	switch catalogName {
 	case "pg_class":
 		return sqlbase.PgCatalogClassTableID, true

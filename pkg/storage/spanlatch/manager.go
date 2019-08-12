@@ -112,7 +112,7 @@ func (lg *Guard) latches(s spanset.SpanScope, a spanset.SpanAccess) []latch {
 	if len == 0 {
 		return nil
 	}
-	const maxArrayLen = int64(1) << 30
+	const maxArrayLen = 1 << 20
 	return (*[maxArrayLen]latch)(lg.latchesPtrs[s][a])[:len:len]
 }
 
