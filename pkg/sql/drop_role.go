@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cockroachdb/cockroach/pkg/keys"
 	"github.com/cockroachdb/cockroach/pkg/security"
 	"github.com/cockroachdb/cockroach/pkg/sql/catalog/dbdesc"
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgcode"
@@ -31,31 +32,33 @@ type DropRoleNode struct {
 	ifExists bool
 	isRole   bool
 	names    func() ([]string, error)
+	n        *tree.DropRole
 }
 
 // DropRole represents a DROP ROLE statement.
 // Privileges: CREATEROLE privilege.
 func (p *planner) DropRole(ctx context.Context, n *tree.DropRole) (planNode, error) {
-	return p.DropRoleNode(ctx, n.Names, n.IfExists, n.IsRole, "DROP ROLE")
+	return p.DropRoleNode(ctx, n, "DROP ROLE")
 }
 
 // DropRoleNode creates a "drop user" plan node. This can be called from DROP USER or DROP ROLE.
 func (p *planner) DropRoleNode(
-	ctx context.Context, namesE tree.Exprs, ifExists bool, isRole bool, opName string,
+	ctx context.Context, n *tree.DropRole, opName string,
 ) (*DropRoleNode, error) {
 	if err := p.CheckRoleOption(ctx, roleoption.CREATEROLE); err != nil {
 		return nil, err
 	}
 
-	names, err := p.TypeAsStringArray(ctx, namesE, opName)
+	names, err := p.TypeAsStringArray(ctx, n.Names, opName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &DropRoleNode{
-		ifExists: ifExists,
-		isRole:   isRole,
+		ifExists: n.IfExists,
+		isRole:   n.IsRole,
 		names:    names,
+		n:        n,
 	}, nil
 }
 
@@ -319,6 +322,40 @@ func (n *DropRoleNode) startExec(params runParams) error {
 		)
 		if err != nil {
 			return err
+		}
+
+		if opName == "drop-user" {
+			err = MakeEventLogger(params.extendedEvalCtx.ExecCfg).InsertEventRecord(
+				params.ctx,
+				params.p.txn,
+				EventLogDropUser,
+				int32(keys.UsersTableID),
+				int32(params.extendedEvalCtx.NodeID.SQLInstanceID()),
+				struct {
+					Statement  string
+					User       string
+					TargetUser string
+				}{n.n.String(), params.SessionData().User, normalizedUsername},
+			)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = MakeEventLogger(params.extendedEvalCtx.ExecCfg).InsertEventRecord(
+				params.ctx,
+				params.p.txn,
+				EventLogDropRole,
+				int32(keys.UsersTableID),
+				int32(params.extendedEvalCtx.NodeID.SQLInstanceID()),
+				struct {
+					Statement string
+					User      string
+					Role      string
+				}{n.n.String(), params.SessionData().User, normalizedUsername},
+			)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

@@ -15,6 +15,7 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/cockroach/pkg/clusterversion"
+	"github.com/cockroachdb/cockroach/pkg/keys"
 	"github.com/cockroachdb/cockroach/pkg/security"
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgcode"
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
@@ -31,21 +32,19 @@ type alterRoleNode struct {
 	ifExists    bool
 	isRole      bool
 	roleOptions roleoption.List
+	n           *tree.AlterRole
 }
 
 // AlterRole represents a ALTER ROLE statement.
 // Privileges: CREATEROLE privilege.
 func (p *planner) AlterRole(ctx context.Context, n *tree.AlterRole) (planNode, error) {
-	return p.AlterRoleNode(ctx, n.Name, n.IfExists, n.IsRole, "ALTER ROLE", n.KVOptions)
+	return p.AlterRoleNode(ctx, n, "ALTER ROLE")
 }
 
 func (p *planner) AlterRoleNode(
 	ctx context.Context,
-	nameE tree.Expr,
-	ifExists bool,
-	isRole bool,
+	n *tree.AlterRole,
 	opName string,
-	kvOptions tree.KVOptions,
 ) (*alterRoleNode, error) {
 	// Note that for Postgres, only superuser can ALTER another superuser.
 	// CockroachDB does not support superuser privilege right now.
@@ -57,7 +56,7 @@ func (p *planner) AlterRoleNode(
 	asStringOrNull := func(e tree.Expr, op string) (func() (bool, string, error), error) {
 		return p.TypeAsStringOrNull(ctx, e, op)
 	}
-	roleOptions, err := kvOptions.ToRoleOptions(asStringOrNull, opName)
+	roleOptions, err := n.KVOptions.ToRoleOptions(asStringOrNull, opName)
 	if err != nil {
 		return nil, err
 	}
@@ -71,16 +70,17 @@ func (p *planner) AlterRoleNode(
 		return nil, err
 	}
 
-	ua, err := p.getUserAuthInfo(ctx, nameE, opName)
+	ua, err := p.getUserAuthInfo(ctx, n.Name, opName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &alterRoleNode{
 		userNameInfo: ua,
-		ifExists:     ifExists,
-		isRole:       isRole,
+		ifExists:     n.IfExists,
+		isRole:       n.IsRole,
 		roleOptions:  roleOptions,
+		n:            n,
 	}, nil
 }
 
@@ -242,7 +242,32 @@ func (n *alterRoleNode) startExec(params runParams) error {
 		}
 	}
 
-	return nil
+	if opName == "alter-user" {
+		return MakeEventLogger(params.extendedEvalCtx.ExecCfg).InsertEventRecord(
+			params.ctx,
+			params.p.txn,
+			EventLogAlterUser,
+			int32(keys.UsersTableID),
+			int32(params.extendedEvalCtx.NodeID.SQLInstanceID()),
+			struct {
+				Statement  string
+				User       string
+				TargetUser string
+			}{n.n.String(), params.SessionData().User, normalizedUsername},
+		)
+	}
+	return MakeEventLogger(params.extendedEvalCtx.ExecCfg).InsertEventRecord(
+		params.ctx,
+		params.p.txn,
+		EventLogAlterRole,
+		int32(keys.UsersTableID),
+		int32(params.extendedEvalCtx.NodeID.SQLInstanceID()),
+		struct {
+			Statement string
+			User      string
+			Role      string
+		}{n.n.String(), params.SessionData().User, normalizedUsername},
+	)
 }
 
 func (*alterRoleNode) Next(runParams) (bool, error) { return false, nil }

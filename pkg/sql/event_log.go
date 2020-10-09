@@ -86,6 +86,20 @@ const (
 	// EventAlterType is recorded when a type is altered.
 	EventLogAlterType EventLogType = "alter_type"
 
+	// EventLogCreateUser is recorded when a user is created.
+	EventLogCreateUser EventLogType = "create_user"
+	// EventLogAlterUser is recorded when a user is altered.
+	EventLogAlterUser EventLogType = "alter_user"
+	// EventLogDropUser is recorded when a user is dropped.
+	EventLogDropUser EventLogType = "drop_user"
+
+	// EventLogCreateRole is recorded when a role is created.
+	EventLogCreateRole EventLogType = "create_role"
+	// EventLogAlterRole is recorded when a role is altered.
+	EventLogAlterRole EventLogType = "alter_role"
+	// EventLogDropRole is recorded when a role is dropped.
+	EventLogDropRole EventLogType = "drop_role"
+
 	// EventLogNodeJoin is recorded when a node joins the cluster.
 	EventLogNodeJoin EventLogType = "node_join"
 	// EventLogNodeRestart is recorded when an existing node rejoins the cluster

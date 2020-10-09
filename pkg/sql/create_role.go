@@ -16,6 +16,7 @@ import (
 	"regexp"
 
 	"github.com/cockroachdb/cockroach/pkg/clusterversion"
+	"github.com/cockroachdb/cockroach/pkg/keys"
 	"github.com/cockroachdb/cockroach/pkg/security"
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgcode"
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
@@ -29,6 +30,7 @@ import (
 // CreateRoleNode creates entries in the system.users table.
 // This is called from CREATE USER and CREATE ROLE.
 type CreateRoleNode struct {
+	n           *tree.CreateRole
 	ifNotExists bool
 	isRole      bool
 	roleOptions roleoption.List
@@ -45,19 +47,15 @@ var RoleOptionsTableName = tree.NewTableName("system", "role_options")
 //   notes: postgres allows the creation of users with an empty password. We do
 //          as well, but disallow password authentication for these users.
 func (p *planner) CreateRole(ctx context.Context, n *tree.CreateRole) (planNode, error) {
-	return p.CreateRoleNode(ctx, n.Name, n.IfNotExists, n.IsRole,
-		"CREATE ROLE", n.KVOptions)
+	return p.CreateRoleNode(ctx, n, "CREATE ROLE")
 }
 
 // CreateRoleNode creates a "create user" plan node.
 // This can be called from CREATE USER or CREATE ROLE.
 func (p *planner) CreateRoleNode(
 	ctx context.Context,
-	nameE tree.Expr,
-	ifNotExists bool,
-	isRole bool,
+	n *tree.CreateRole,
 	opName string,
-	kvOptions tree.KVOptions,
 ) (*CreateRoleNode, error) {
 	if err := p.CheckRoleOption(ctx, roleoption.CREATEROLE); err != nil {
 		return nil, err
@@ -66,7 +64,7 @@ func (p *planner) CreateRoleNode(
 	asStringOrNull := func(e tree.Expr, op string) (func() (bool, string, error), error) {
 		return p.TypeAsStringOrNull(ctx, e, op)
 	}
-	roleOptions, err := kvOptions.ToRoleOptions(asStringOrNull, opName)
+	roleOptions, err := n.KVOptions.ToRoleOptions(asStringOrNull, opName)
 	if err != nil {
 		return nil, err
 	}
@@ -82,20 +80,21 @@ func (p *planner) CreateRoleNode(
 	}
 
 	// Using CREATE ROLE syntax enables NOLOGIN by default.
-	if isRole && !roleOptions.Contains(roleoption.LOGIN) && !roleOptions.Contains(roleoption.NOLOGIN) {
+	if n.IsRole && !roleOptions.Contains(roleoption.LOGIN) && !roleOptions.Contains(roleoption.NOLOGIN) {
 		roleOptions = append(roleOptions,
 			roleoption.RoleOption{Option: roleoption.NOLOGIN, HasValue: false})
 	}
 
-	ua, err := p.getUserAuthInfo(ctx, nameE, opName)
+	ua, err := p.getUserAuthInfo(ctx, n.Name, opName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &CreateRoleNode{
+		n:            n,
 		userNameInfo: ua,
-		ifNotExists:  ifNotExists,
-		isRole:       isRole,
+		ifNotExists:  n.IfNotExists,
+		isRole:       n.IsRole,
 		roleOptions:  roleOptions,
 	}, nil
 }
@@ -229,7 +228,32 @@ func (n *CreateRoleNode) startExec(params runParams) error {
 		}
 	}
 
-	return nil
+	if opName == "create-user" {
+		return MakeEventLogger(params.extendedEvalCtx.ExecCfg).InsertEventRecord(
+			params.ctx,
+			params.p.txn,
+			EventLogCreateUser,
+			int32(keys.UsersTableID),
+			int32(params.extendedEvalCtx.NodeID.SQLInstanceID()),
+			struct {
+				Statement  string
+				User       string
+				TargetUser string
+			}{n.n.String(), params.SessionData().User, normalizedUsername},
+		)
+	}
+	return MakeEventLogger(params.extendedEvalCtx.ExecCfg).InsertEventRecord(
+		params.ctx,
+		params.p.txn,
+		EventLogCreateRole,
+		int32(keys.UsersTableID),
+		int32(params.extendedEvalCtx.NodeID.SQLInstanceID()),
+		struct {
+			Statement string
+			User      string
+			Role      string
+		}{n.n.String(), params.SessionData().User, normalizedUsername},
+	)
 }
 
 // Next implements the planNode interface.

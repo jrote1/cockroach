@@ -44,6 +44,18 @@ export const CREATE_SEQUENCE = "create_sequence";
 export const ALTER_SEQUENCE = "alter_sequence";
 // Recorded when a sequence is dropped.
 export const DROP_SEQUENCE = "drop_sequence";
+// Recorded when a user is created.
+export const CREATE_USER = "create_user";
+// Recorded when a user is altered.
+export const ALTER_USER = "alter_user";
+// Recorded when a user is dropped.
+export const DROP_USER = "drop_user";
+// Recorded when a role is created.
+export const CREATE_ROLE = "create_role";
+// Recorded when a role is altered.
+export const ALTER_ROLE = "alter_role";
+// Recorded when a role is dropped.
+export const DROP_ROLE = "drop_role";
 // Recorded when an in-progress schema change encounters a problem and is
 // reversed.
 export const REVERSE_SCHEMA_CHANGE = "reverse_schema_change";

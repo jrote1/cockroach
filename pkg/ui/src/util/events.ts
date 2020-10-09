@@ -52,6 +52,18 @@ export function getEventDescription(e: Event$Properties): string {
       return `Sequence Altered: User ${info.User} altered sequence ${info.SequenceName}`;
     case eventTypes.DROP_SEQUENCE:
       return `Sequence Dropped: User ${info.User} dropped sequence ${info.SequenceName}`;
+    case eventTypes.CREATE_USER:
+      return `User Created: User ${info.User} created user ${info.TargetUser}`;
+    case eventTypes.ALTER_USER:
+      return `User Altered: User ${info.User} altered user ${info.TargetUser}`;
+    case eventTypes.DROP_USER:
+      return `User Dropped: User ${info.User} dropped user ${info.TargetUser}`;
+    case eventTypes.CREATE_ROLE:
+      return `Role Created: User ${info.User} created role ${info.Role}`;
+    case eventTypes.ALTER_ROLE:
+      return `Role Altered: User ${info.User} altered role ${info.Role}`;
+    case eventTypes.DROP_ROLE:
+      return `Role Dropped: User ${info.User} dropped role ${info.Role}`;
     case eventTypes.REVERSE_SCHEMA_CHANGE:
       return `Schema Change Reversed: Schema change with ID ${info.MutationID} was reversed.`;
     case eventTypes.FINISH_SCHEMA_CHANGE:
@@ -104,6 +116,8 @@ export interface EventInfo {
   DroppedTables?: string[];
   DroppedTablesAndViews?: string[];
   DroppedSchemaObjects?: string[];
+  TargetUser: string;
+  Role: string;
 }
 
 export function getDroppedObjectsText(eventInfo: EventInfo): string {
